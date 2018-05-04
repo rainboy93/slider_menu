@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <RelativeLayout
+        android:id="@+id/container"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:clipChildren="false"></RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/background_container"
+        android:layout_width="match_parent"
+        android:layout_height="100dp">
+
+        <rainboy.dev.HorizontalScrollViewExt
+            android:id="@+id/scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0.4"
+            android:background="@android:color/holo_blue_bright"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/view"
+                    android:layout_width="500dp"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </rainboy.dev.HorizontalScrollViewExt>
+    </LinearLayout>
+</RelativeLayout>
