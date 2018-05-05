@@ -2,13 +2,13 @@ package rainboy.dev;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Color;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
 import com.github.florent37.viewanimator.AnimationListener;
@@ -19,19 +19,23 @@ import java.util.Collections;
 
 public class TabView extends RelativeLayout implements GestureDetector.OnGestureListener {
     private int numberOfTab = 5;
-    private ArrayList<ImageView> listImage = new ArrayList<>();
+    private ArrayList<Tab> listView = new ArrayList<>();
     private int width = 0;
     private int scrollWidth = 0;
 
     private View mask;
-    private RelativeLayout container;
 
     private int currentPos = 0;
     private int currentIndex = 0;
+    private int gap = 0;
 
     private GestureDetector mDetector;
 
     private final int SCREEN_SCALE = 3;
+
+    private int[] backgroundColors = new int[]{
+            Color.BLUE, Color.CYAN, Color.RED, Color.YELLOW, Color.GREEN, Color.GRAY
+    };
 
     public TabView(Context context) {
         super(context);
@@ -54,7 +58,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
         LayoutInflater inflater = LayoutInflater.from(context);
         View v = inflater.inflate(R.layout.tab_view, this, true);
-        container = v.findViewById(R.id.container);
+        RelativeLayout container = v.findViewById(R.id.container);
         mask = v.findViewById(R.id.mask);
 
         if (attrs != null) {
@@ -73,27 +77,24 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
         }
 
         scrollWidth = width - width / SCREEN_SCALE;
+        gap = scrollWidth / SCREEN_SCALE / 5;
 
         for (int i = numberOfTab - 1; i >= 0; i--) {
-            ImageView imageView = new ImageView(context);
-            imageView.setImageResource(R.mipmap.ic_launcher);
-            imageView.setScaleType(ImageView.ScaleType.FIT_XY);
-
-            imageView.setX(i * width / (numberOfTab - 1) - i * width / ((numberOfTab - 1) * SCREEN_SCALE));
+            Tab tab = new Tab(context);
+            tab.setX(i * width / (numberOfTab - 1) - i * width / ((numberOfTab - 1) * SCREEN_SCALE));
+            tab.setCardBackground(backgroundColors[i]);
 
             RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(width / SCREEN_SCALE, -1);
             params.addRule(RelativeLayout.CENTER_VERTICAL);
 
-//            imageView.setPivotX((float) (i / (numberOfTab - 1)) * width / SCREEN_SCALE);
-
-            container.addView(imageView, params);
-            listImage.add(imageView);
+            container.addView(tab, params);
+            listView.add(tab);
         }
-        Collections.reverse(listImage);
-        relayoutImage(0);
+        Collections.reverse(listView);
+        relayoutView(0);
     }
 
-    private void relayoutImage(int position) {
+    private void relayoutView(int position) {
         if (position > scrollWidth) {
             position = scrollWidth;
         }
@@ -105,30 +106,42 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             int dif = basePos - position;
             int absDif = Math.abs(dif);
 
-            if (absDif < 10) {
+            if (absDif < gap) {
                 currentIndex = i;
-                reOrderImage();
+                reorderView();
             }
+//            Log.d("dungnt", "Current index " + currentIndex);
 
             float scale = 1 - absDif / (2f * scrollWidth);
             float posScale = dif / (2f * scrollWidth);
 
             basePos += posScale * width / SCREEN_SCALE / 2;
 
-            listImage.get(i).setX(basePos);
+            float margin = 0;
+            if (i != 0 && i != numberOfTab - 1) {
+                margin = (float) scrollWidth / 2 - position;
+                margin = margin / (numberOfTab - 1);
+            }
 
-            listImage.get(i).setScaleX(scale);
+            listView.get(i).setX(basePos + margin);
+
+
+            listView.get(i).setScaleX(scale);
+//            listView.get(i).setScaleY(scale);
+            listView.get(i).setScale(scale);
+
+//            Log.d("dungnt", "Base pos " + basePos);
         }
     }
 
-    private void reOrderImage() {
+    private void reorderView() {
         for (int i = 0; i < currentIndex; i++) {
-            listImage.get(i).bringToFront();
+            listView.get(i).bringToFront();
         }
         for (int i = numberOfTab - 1; i > currentIndex; i--) {
-            listImage.get(i).bringToFront();
+            listView.get(i).bringToFront();
         }
-        listImage.get(currentIndex).bringToFront();
+        listView.get(currentIndex).bringToFront();
     }
 
     @Override
@@ -157,13 +170,13 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        currentPos += distanceX;
+        currentPos += distanceX / 2;
         if (currentPos < 0) {
             currentPos = 0;
         } else if (currentPos > scrollWidth) {
             currentPos = scrollWidth;
         }
-        relayoutImage(currentPos);
+        relayoutView(currentPos);
         return false;
     }
 
@@ -174,7 +187,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        final float velo = -velocityX / 200;
+        final float velo = -velocityX / 300;
         viewAnimator = ViewAnimator.animate(mask)
                 .custom(new AnimationListener.Update() {
                     @Override
@@ -182,20 +195,14 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                         currentPos += (velo - value);
                         if (currentPos < 0) {
                             currentPos = 0;
-                            if (viewAnimator != null) {
-                                viewAnimator.cancel();
-                            }
                         } else if (currentPos > scrollWidth) {
                             currentPos = scrollWidth;
-                            if (viewAnimator != null) {
-                                viewAnimator.cancel();
-                            }
                         }
-                        relayoutImage(currentPos);
+                        relayoutView(currentPos);
                     }
                 }, 0, velo)
 //                .decelerate()
-                .duration(500)
+                .duration(300)
                 .start();
         return false;
     }
