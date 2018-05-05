@@ -2,8 +2,6 @@ package rainboy.dev;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.support.animation.DynamicAnimation;
-import android.support.animation.FlingAnimation;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -103,15 +101,19 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
         for (int i = 0; i < numberOfTab; i++) {
             int basePos = i * width / (numberOfTab - 1)
                     - i * width / ((numberOfTab - 1) * SCREEN_SCALE);
-            Log.d("dungnt", "Base pos " + basePos);
-            int dif = position - basePos;
 
-            if (Math.abs(dif) < 10) {
+            int dif = basePos - position;
+            int absDif = Math.abs(dif);
+
+            if (absDif < 10) {
                 currentIndex = i;
                 reOrderImage();
             }
 
-            float scale = 1 - Math.abs(dif) / (width * 1.5f);
+            float scale = 1 - absDif / (2f * scrollWidth);
+            float posScale = dif / (2f * scrollWidth);
+
+            basePos += posScale * width / SCREEN_SCALE / 2;
 
             listImage.get(i).setX(basePos);
 
