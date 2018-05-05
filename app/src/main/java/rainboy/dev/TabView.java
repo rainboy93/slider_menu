@@ -3,8 +3,8 @@ package rainboy.dev;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -36,6 +36,8 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
     private int[] backgroundColors = new int[]{
             Color.BLUE, Color.CYAN, Color.RED, Color.YELLOW, Color.GREEN, Color.GRAY
     };
+
+    private float[] realPositions;
 
     public TabView(Context context) {
         super(context);
@@ -76,6 +78,8 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             return;
         }
 
+        realPositions = new float[numberOfTab];
+
         scrollWidth = width - width / SCREEN_SCALE;
         gap = scrollWidth / SCREEN_SCALE / 5;
 
@@ -110,8 +114,6 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                 currentIndex = i;
                 reorderView();
             }
-//            Log.d("dungnt", "Current index " + currentIndex);
-
             float scale = 1 - absDif / (2f * scrollWidth);
             float posScale = dif / (2f * scrollWidth);
 
@@ -125,12 +127,8 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
             listView.get(i).setX(basePos + margin);
 
-
             listView.get(i).setScaleX(scale);
-//            listView.get(i).setScaleY(scale);
             listView.get(i).setScale(scale);
-
-//            Log.d("dungnt", "Base pos " + basePos);
         }
     }
 
@@ -164,7 +162,42 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean onSingleTapUp(MotionEvent e) {
-        Log.d("dungnt", "Single tap " + e.getX());
+        float tapPos = e.getRawX();
+
+        Rect currentRect = new Rect();
+        listView.get(currentIndex).getGlobalVisibleRect(currentRect);
+        realPositions[currentIndex] = currentRect.left;
+
+        for (int i = 0; i < currentIndex; i++) {
+            Rect rect = new Rect();
+            listView.get(i).getGlobalVisibleRect(rect);
+            realPositions[i] = rect.left;
+        }
+        for (int i = numberOfTab - 1; i > currentIndex; i--) {
+            Rect rect = new Rect();
+            listView.get(i - 1).getGlobalVisibleRect(rect);
+            realPositions[i] = rect.right;
+        }
+
+        for (int i = numberOfTab - 1; i >= 0; i--) {
+            if (tapPos > realPositions[i]) {
+                int basePos = i * width / (numberOfTab - 1)
+                        - i * width / ((numberOfTab - 1) * SCREEN_SCALE);
+                viewAnimator = ViewAnimator.animate(mask)
+                        .custom(new AnimationListener.Update() {
+                            @Override
+                            public void update(View view, float value) {
+                                currentPos = (int) value;
+                                relayoutView(currentPos);
+                            }
+                        }, currentPos, basePos)
+                        .decelerate()
+                        .duration(300)
+                        .start();
+
+                break;
+            }
+        }
         return false;
     }
 
@@ -187,7 +220,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        final float velo = -velocityX / 300;
+        final float velo = -velocityX / 200;
         viewAnimator = ViewAnimator.animate(mask)
                 .custom(new AnimationListener.Update() {
                     @Override
@@ -201,7 +234,6 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                         relayoutView(currentPos);
                     }
                 }, 0, velo)
-//                .decelerate()
                 .duration(300)
                 .start();
         return false;
