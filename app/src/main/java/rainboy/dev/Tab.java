@@ -14,6 +14,7 @@ public class Tab extends RelativeLayout {
     private ImageView icon;
     private TextView title;
     private CardView cardView;
+    private View border;
 
     public Tab(Context context) {
         super(context);
@@ -37,6 +38,7 @@ public class Tab extends RelativeLayout {
         icon = v.findViewById(R.id.icon);
         title = v.findViewById(R.id.title);
         cardView = v.findViewById(R.id.card_view);
+        border = v.findViewById(R.id.border);
     }
 
     public void setScale(float scale) {
@@ -54,5 +56,6 @@ public class Tab extends RelativeLayout {
 
     public void setTabSelected(boolean selected) {
         title.setTextColor(selected ? Color.WHITE : Color.BLACK);
+        border.setVisibility(selected ? VISIBLE : INVISIBLE);
     }
 }

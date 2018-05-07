@@ -122,6 +122,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                 if (currentIndex != i) {
                     currentIndex = i;
                     reorderView();
+                    invalidateView();
                 }
             }
             float scale = 1 - absDif / (2f * scrollWidth);
@@ -216,12 +217,6 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                         }, currentPos, basePos)
                         .decelerate()
                         .duration(300)
-                        .onStop(new AnimationListener.Stop() {
-                            @Override
-                            public void onStop() {
-                                invalidateView();
-                            }
-                        })
                         .start();
 
                 break;
@@ -232,14 +227,13 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        currentPos += distanceX / 2;
+        currentPos += distanceX / 3;
         if (currentPos < 0) {
             currentPos = 0;
         } else if (currentPos > scrollWidth) {
             currentPos = scrollWidth;
         }
         relayoutView(currentPos);
-        invalidateView();
         return false;
     }
 
@@ -265,12 +259,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                     }
                 }, 0, velo)
                 .duration(300)
-                .onStop(new AnimationListener.Stop() {
-                    @Override
-                    public void onStop() {
-                        invalidateView();
-                    }
-                })
+                .decelerate()
                 .start();
         return false;
     }
