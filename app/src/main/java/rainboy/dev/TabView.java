@@ -35,8 +35,10 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     private final int SCREEN_SCALE = 3;
 
-    private int[] backgroundColors = new int[]{
-            Color.BLUE, Color.CYAN, Color.RED, Color.YELLOW, Color.GREEN, Color.GRAY
+    private int[] backgrounds = new int[]{
+            R.drawable.tab_deposit, R.drawable.tab_payment,
+            R.drawable.tab_qr, R.drawable.tab_game,
+            R.drawable.tab_gift, R.drawable.tab_withdraw,
     };
 
     private String[] titles = new String[]{
@@ -92,7 +94,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
         for (int i = numberOfTab - 1; i >= 0; i--) {
             Tab tab = new Tab(context);
             tab.setX(i * width / (numberOfTab - 1) - i * width / ((numberOfTab - 1) * SCREEN_SCALE));
-            tab.setCardBackground(backgroundColors[i]);
+            tab.setCardBackground(backgrounds[i]);
             tab.setTitle(titles[i]);
 
             RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(width / SCREEN_SCALE, -1);
