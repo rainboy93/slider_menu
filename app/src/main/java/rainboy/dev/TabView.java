@@ -25,8 +25,10 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     private View mask;
 
+    private int initialPosition = -1;
+    private int initialIndex = -1;
     private int currentPos = 0;
-    private int currentIndex = 0;
+    private int currentIndex = -1;
     private int gap = 0;
 
     private GestureDetector mDetector;
@@ -35,6 +37,10 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     private int[] backgroundColors = new int[]{
             Color.BLUE, Color.CYAN, Color.RED, Color.YELLOW, Color.GREEN, Color.GRAY
+    };
+
+    private String[] titles = new String[]{
+            "NẠP TIỀN", "THANH TOÁN", "MY QR CODE", "CHƠI GAME", "QUÀ TẶNG", "RÚT TIỀN"
     };
 
     private float[] realPositions;
@@ -87,6 +93,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             Tab tab = new Tab(context);
             tab.setX(i * width / (numberOfTab - 1) - i * width / ((numberOfTab - 1) * SCREEN_SCALE));
             tab.setCardBackground(backgroundColors[i]);
+            tab.setTitle(titles[i]);
 
             RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(width / SCREEN_SCALE, -1);
             params.addRule(RelativeLayout.CENTER_VERTICAL);
@@ -96,6 +103,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
         }
         Collections.reverse(listView);
         relayoutView(0);
+        invalidateView();
     }
 
     private void relayoutView(int position) {
@@ -111,8 +119,10 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             int absDif = Math.abs(dif);
 
             if (absDif < gap) {
-                currentIndex = i;
-                reorderView();
+                if (currentIndex != i) {
+                    currentIndex = i;
+                    reorderView();
+                }
             }
             float scale = 1 - absDif / (2f * scrollWidth);
             float posScale = dif / (2f * scrollWidth);
@@ -140,6 +150,19 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             listView.get(i).bringToFront();
         }
         listView.get(currentIndex).bringToFront();
+    }
+
+    private void invalidateView() {
+        if (currentIndex != initialIndex) {
+            for (int i = 0; i < numberOfTab; i++) {
+                if (currentIndex == i) {
+                    listView.get(i).setTabSelected(true);
+                } else {
+                    listView.get(i).setTabSelected(false);
+                }
+            }
+            initialIndex = currentIndex;
+        }
     }
 
     @Override
@@ -193,6 +216,12 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                         }, currentPos, basePos)
                         .decelerate()
                         .duration(300)
+                        .onStop(new AnimationListener.Stop() {
+                            @Override
+                            public void onStop() {
+                                invalidateView();
+                            }
+                        })
                         .start();
 
                 break;
@@ -210,6 +239,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             currentPos = scrollWidth;
         }
         relayoutView(currentPos);
+        invalidateView();
         return false;
     }
 
@@ -235,9 +265,26 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                     }
                 }, 0, velo)
                 .duration(300)
+                .onStop(new AnimationListener.Stop() {
+                    @Override
+                    public void onStop() {
+                        invalidateView();
+                    }
+                })
                 .start();
         return false;
     }
 
     private ViewAnimator viewAnimator;
+
+    // Handle tab event
+    private TabListener listener;
+
+    public void setTabListener(TabListener listener) {
+        this.listener = listener;
+    }
+
+    public interface TabListener {
+        void onTabSelected(int position);
+    }
 }
