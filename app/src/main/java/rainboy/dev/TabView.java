@@ -41,6 +41,12 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             R.drawable.tab_gift, R.drawable.tab_withdraw,
     };
 
+    private int[] icons = new int[]{
+            R.drawable.tab_icon_deposit, R.drawable.tab_icon_payment,
+            R.drawable.tab_icon_qr, R.drawable.tab_icon_game,
+            R.drawable.tab_icon_gift, R.drawable.tab_icon_withdraw,
+    };
+
     private String[] titles = new String[]{
             "NẠP TIỀN", "THANH TOÁN", "MY QR CODE", "CHƠI GAME", "QUÀ TẶNG", "RÚT TIỀN"
     };
@@ -113,6 +119,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             tab.setX(i * width / (numberOfTab - 1) - i * width / ((numberOfTab - 1) * SCREEN_SCALE));
             tab.setCardBackground(backgrounds[i]);
             tab.setTitle(titles[i]);
+            tab.setIcon(icons[i]);
 
             RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(width / SCREEN_SCALE, -1);
             params.addRule(RelativeLayout.CENTER_VERTICAL);
@@ -272,12 +279,12 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        final float velo = -velocityX / 100;
+        final float velocity = -velocityX / 100;
         viewAnimator = ViewAnimator.animate(mask)
                 .custom(new AnimationListener.Update() {
                     @Override
                     public void update(View view, float value) {
-                        currentPos += (velo - value);
+                        currentPos += (velocity - value);
                         if (currentPos < 0) {
                             currentPos = 0;
                         } else if (currentPos > scrollWidth) {
@@ -285,7 +292,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                         }
                         relayoutView(currentPos);
                     }
-                }, 0, velo)
+                }, 0, velocity)
                 .onStop(new AnimationListener.Stop() {
                     @Override
                     public void onStop() {
