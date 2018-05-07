@@ -26,7 +26,6 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     private View mask;
 
-    private int initialPosition = -1;
     private int initialIndex = -1;
     private int currentPos = 0;
     private int currentIndex = -1;
@@ -181,7 +180,16 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        return mDetector.onTouchEvent(ev);
+        if (mDetector.onTouchEvent(ev)) {
+            return true;
+        }
+        if (ev.getAction() == MotionEvent.ACTION_UP) {
+            if (listener != null) {
+                listener.onTabSelected(currentIndex);
+            }
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -228,13 +236,21 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                                 relayoutView(currentPos);
                             }
                         }, currentPos, basePos)
+                        .onStop(new AnimationListener.Stop() {
+                            @Override
+                            public void onStop() {
+                                if (listener != null) {
+                                    listener.onTabSelected(currentIndex);
+                                }
+                            }
+                        })
                         .decelerate()
                         .duration(300)
                         .start();
                 break;
             }
         }
-        return false;
+        return true;
     }
 
     @Override
@@ -246,7 +262,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             currentPos = scrollWidth;
         }
         relayoutView(currentPos);
-        return false;
+        return true;
     }
 
     @Override
@@ -270,10 +286,18 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                         relayoutView(currentPos);
                     }
                 }, 0, velo)
+                .onStop(new AnimationListener.Stop() {
+                    @Override
+                    public void onStop() {
+                        if (listener != null) {
+                            listener.onTabSelected(currentIndex);
+                        }
+                    }
+                })
                 .duration(300)
                 .decelerate()
                 .start();
-        return false;
+        return true;
     }
 
     private ViewAnimator viewAnimator;
