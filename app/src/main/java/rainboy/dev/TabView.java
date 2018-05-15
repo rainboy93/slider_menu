@@ -17,12 +17,14 @@ import com.github.florent37.viewanimator.ViewAnimator;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 public class TabView extends RelativeLayout implements GestureDetector.OnGestureListener {
     private int numberOfTab = 5;
     private ArrayList<Tab> listView = new ArrayList<>();
     private int width = 0;
     private int scrollWidth = 0;
+    private int tabWidth = 0;
 
     private View mask;
 
@@ -31,9 +33,13 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
     private int currentIndex = -1;
     private int gap = 0;
 
+    private boolean animating = false;
+
     private GestureDetector mDetector;
 
     private final int SCREEN_SCALE = 3;
+
+    private int[] targetPosition;
 
     private int[] backgrounds = new int[]{
             R.drawable.tab_deposit, R.drawable.tab_payment,
@@ -76,7 +82,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
         LayoutInflater inflater = LayoutInflater.from(context);
         View v = inflater.inflate(R.layout.tab_view, this, true);
-        RelativeLayout container = v.findViewById(R.id.container);
+        RelativeLayout container = (RelativeLayout) v.findViewById(R.id.container);
         mask = v.findViewById(R.id.mask);
 
         if (attrs != null) {
@@ -95,9 +101,15 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
         }
 
         realPositions = new float[numberOfTab];
+        targetPosition = new int[numberOfTab];
         minPos = new int[numberOfTab];
         maxPos = new int[numberOfTab];
-        int realWidth = 2 * width / SCREEN_SCALE / 3;
+        tabWidth = width / SCREEN_SCALE;
+        int realWidth = 2 * tabWidth / 3;
+
+        scrollWidth = width - tabWidth;
+        gap = scrollWidth / SCREEN_SCALE / 5;
+
         for (int i = 0; i < numberOfTab - 1; i++) {
             if (i != 0) {
                 minPos[i] = (int) (minPos[i - 1] + (float) realWidth * i / (numberOfTab - 1));
@@ -107,26 +119,34 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
             if (i != numberOfTab - 1) {
                 maxPos[i] = (int) (maxPos[i + 1] - (float) realWidth * (numberOfTab - i - 1) / (numberOfTab - 1));
             } else {
-                maxPos[i] = (numberOfTab - 1) * (width - width / SCREEN_SCALE) / (numberOfTab - 1);
+                maxPos[i] = (numberOfTab - 1) * scrollWidth / (numberOfTab - 1);
             }
-        }
 
-        scrollWidth = width - width / SCREEN_SCALE;
-        gap = scrollWidth / SCREEN_SCALE / 5;
-
-        for (int i = numberOfTab - 1; i >= 0; i--) {
             Tab tab = new Tab(context);
-            tab.setX(i * width / (numberOfTab - 1) - i * width / ((numberOfTab - 1) * SCREEN_SCALE));
+            tab.setX(i * width / (numberOfTab - 1) - i * tabWidth / (numberOfTab - 1));
             tab.setCardBackground(backgrounds[i]);
             tab.setTitle(titles[i]);
             tab.setIcon(icons[i]);
+            tab.setMinX((int) (tabWidth / 2f - tabWidth / 2f * (numberOfTab - 1 - i) / (numberOfTab - 1)));
+            tab.setMaxX((int) (tabWidth / 2f + tabWidth / 2f * (float) i / (numberOfTab - 1)));
 
-            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(width / SCREEN_SCALE, -1);
+            LayoutParams params = new LayoutParams(tabWidth, -1);
             params.addRule(RelativeLayout.CENTER_VERTICAL);
 
             container.addView(tab, params);
             listView.add(tab);
         }
+
+        for (int i = 0; i < numberOfTab; i++) {
+            if (i == 0) {
+                targetPosition[i] = 0;
+            } else if (i == numberOfTab - 1) {
+                targetPosition[i] = scrollWidth;
+            } else {
+                targetPosition[i] = maxPos[i] - (maxPos[i] - minPos[i]) / (numberOfTab - 1);
+            }
+        }
+
         Collections.reverse(listView);
         relayoutView(0);
         invalidateView();
@@ -138,7 +158,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
         }
 
         for (int i = 0; i < numberOfTab; i++) {
-            int basePos = i * (width - width / SCREEN_SCALE) / (numberOfTab - 1);
+            int basePos = i * scrollWidth / (numberOfTab - 1);
 
             int dif = basePos - position;
             int absDif = Math.abs(dif);
@@ -151,14 +171,16 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                 }
             }
 
+            float path = (float) position / scrollWidth;
             if (i == 0) {
                 listView.get(i).setX(0);
             } else if (i == numberOfTab - 1) {
                 listView.get(i).setX(basePos);
             } else {
-                float path = (float) position / scrollWidth;
+
                 listView.get(i).setX(maxPos[i] - path * (maxPos[i] - minPos[i]));
             }
+//            listView.get(i).setXPosition(path);
         }
     }
 
@@ -187,24 +209,19 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (mDetector.onTouchEvent(ev)) {
-            return true;
-        }
-        if (ev.getAction() == MotionEvent.ACTION_UP) {
-            if (listener != null) {
-                listener.onTabSelected(currentIndex);
-            }
-            return true;
-        }
-        return false;
+        return mDetector.onTouchEvent(ev);
     }
 
     @Override
     public boolean onDown(MotionEvent e) {
-        if (viewAnimator != null) {
-            viewAnimator.cancel();
+        if (animating) {
+            return false;
+        } else {
+            if (viewAnimator != null) {
+                viewAnimator.cancel();
+            }
+            return true;
         }
-        return true;
     }
 
     @Override
@@ -214,6 +231,9 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean onSingleTapUp(MotionEvent e) {
+        if (animating) {
+            return false;
+        }
         float tapPos = e.getRawX();
 
         Rect currentRect = new Rect();
@@ -233,27 +253,62 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
         for (int i = numberOfTab - 1; i >= 0; i--) {
             if (tapPos > realPositions[i]) {
-                int basePos = i * width / (numberOfTab - 1)
-                        - i * width / ((numberOfTab - 1) * SCREEN_SCALE);
-                viewAnimator = ViewAnimator.animate(mask)
-                        .custom(new AnimationListener.Update() {
-                            @Override
-                            public void update(View view, float value) {
-                                currentPos = (int) value;
-                                relayoutView(currentPos);
-                            }
-                        }, currentPos, basePos)
-                        .onStop(new AnimationListener.Stop() {
-                            @Override
-                            public void onStop() {
-                                if (listener != null) {
-                                    listener.onTabSelected(currentIndex);
-                                }
-                            }
-                        })
-                        .decelerate()
-                        .duration(300)
-                        .start();
+                if (i == currentIndex) {
+                    if (listener != null) {
+                        listener.onTabSelected(currentIndex);
+                    }
+                } else {
+                    List<Tab> tabs = new ArrayList<>();
+                    if (i == 0) {
+                        tabs.add(listView.get(numberOfTab - 1));
+                    } else {
+                        tabs.add(listView.get(i - 1));
+                    }
+
+                    if (i == numberOfTab - 1) {
+                        tabs.add(listView.get(0));
+                    } else {
+                        tabs.add(listView.get(i + 1));
+                    }
+
+                    for (int n = 1; n < numberOfTab - 1; n++) {
+                        int t = i + n;
+                        if (t > numberOfTab - 1) {
+                            t -= numberOfTab - 1;
+                        }
+                        tabs.add(listView.get(t));
+                    }
+                    listView = new ArrayList<>(tabs);
+
+                    int basePos = scrollWidth / (numberOfTab - 1);
+                    relayoutView(basePos);
+
+//                    int basePos = i * width / (numberOfTab - 1)
+//                            - i * tabWidth / (numberOfTab - 1);
+//                    viewAnimator = ViewAnimator.animate(mask)
+//                            .custom(new AnimationListener.Update() {
+//                                @Override
+//                                public void update(View view, float value) {
+//                                    currentPos = (int) value;
+//                                    relayoutView(currentPos);
+//                                }
+//                            }, currentPos, basePos)
+//                            .onStart(new AnimationListener.Start() {
+//                                @Override
+//                                public void onStart() {
+//                                    animating = true;
+//                                }
+//                            })
+//                            .onStop(new AnimationListener.Stop() {
+//                                @Override
+//                                public void onStop() {
+//                                    animating = false;
+//                                }
+//                            })
+//                            .decelerate()
+//                            .duration(300)
+//                            .start();
+                }
                 break;
             }
         }
@@ -262,7 +317,7 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        currentPos += distanceX / 3;
+        currentPos += distanceX;
         if (currentPos < 0) {
             currentPos = 0;
         } else if (currentPos > scrollWidth) {
@@ -274,7 +329,6 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
 
     @Override
     public void onLongPress(MotionEvent e) {
-
     }
 
     @Override
@@ -293,12 +347,16 @@ public class TabView extends RelativeLayout implements GestureDetector.OnGesture
                         relayoutView(currentPos);
                     }
                 }, 0, velocity)
+                .onStart(new AnimationListener.Start() {
+                    @Override
+                    public void onStart() {
+                        animating = true;
+                    }
+                })
                 .onStop(new AnimationListener.Stop() {
                     @Override
                     public void onStop() {
-                        if (listener != null) {
-                            listener.onTabSelected(currentIndex);
-                        }
+                        animating = false;
                     }
                 })
                 .duration(300)
